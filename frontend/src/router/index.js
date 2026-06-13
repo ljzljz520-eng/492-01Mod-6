@@ -35,6 +35,10 @@ const routes = [
       {
         path: 'user',
         component: () => import('@/views/pc/User.vue')
+      },
+      {
+        path: 'risk',
+        component: () => import('@/views/pc/Risk.vue')
       }
     ]
   },
@@ -53,6 +57,10 @@ const routes = [
       {
         path: 'work',
         component: () => import('@/views/h5/Work.vue')
+      },
+      {
+        path: 'risk',
+        component: () => import('@/views/h5/Risk.vue')
       },
       {
         path: 'user',

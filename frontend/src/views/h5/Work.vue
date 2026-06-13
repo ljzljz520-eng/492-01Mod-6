@@ -60,12 +60,22 @@
           <div class="p-4">
             <div class="flex items-center justify-between mb-2">
               <h3 class="text-base font-semibold text-gray-800 flex-1">{{ item.workName }}</h3>
-              <van-tag 
-                :type="getStatusType(item.workStatus)"
-                class="ml-2 rounded-full"
-              >
-                {{ getStatusText(item.workStatus) }}
-              </van-tag>
+              <div class="flex items-center gap-1 ml-2">
+                <van-tag 
+                  v-if="item.isHighRisk === 1"
+                  type="danger"
+                  size="small"
+                  class="rounded-full"
+                >
+                  高风险
+                </van-tag>
+                <van-tag 
+                  :type="getStatusType(item.workStatus)"
+                  class="rounded-full"
+                >
+                  {{ getStatusText(item.workStatus) }}
+                </van-tag>
+              </div>
             </div>
             <p class="text-sm text-gray-600 mb-3 line-clamp-2">{{ item.workContent }}</p>
             <div class="flex items-center justify-between text-xs text-gray-500">
@@ -81,14 +91,24 @@
                   {{ getPriorityText(item.priority) }}
                 </van-tag>
               </div>
-              <van-button
-                size="mini"
-                type="danger"
-                @click.stop="handleDelete(item)"
-                class="rounded-full"
-              >
-                删除
-              </van-button>
+              <div class="flex gap-2">
+                <van-button
+                  size="mini"
+                  type="primary"
+                  @click.stop="handleSignup(item)"
+                  class="rounded-full"
+                >
+                  报名
+                </van-button>
+                <van-button
+                  size="mini"
+                  type="danger"
+                  @click.stop="handleDelete(item)"
+                  class="rounded-full"
+                >
+                  删除
+                </van-button>
+              </div>
             </div>
           </div>
         </div>
@@ -179,6 +199,13 @@
               rows="3"
               placeholder="请输入备注"
             />
+            <van-cell-group inset class="mt-4">
+              <van-cell title="是否高风险岗位" size="large">
+                <template #right-icon>
+                  <van-switch v-model="formData.isHighRisk" :active-value="1" :inactive-value="0" />
+                </template>
+              </van-cell>
+            </van-cell-group>
           </van-cell-group>
           <div class="p-4">
             <van-button 
@@ -258,12 +285,15 @@
 
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import { showToast, showConfirmDialog } from 'vant'
+import { useRoute, useRouter } from 'vue-router'
+import { showToast, showConfirmDialog, showDialog } from 'vant'
 import { workApi } from '@/api/work'
+import { riskApi } from '@/api/risk'
 import dayjs from 'dayjs'
 
 const route = useRoute()
+const router = useRouter()
+const currentUserId = ref(1)
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -301,6 +331,7 @@ const formData = reactive({
   workTime: null,
   startTime: null,
   endTime: null,
+  isHighRisk: 0,
   remark: ''
 })
 
@@ -406,6 +437,7 @@ const handleAdd = () => {
     workTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
     startTime: null,
     endTime: null,
+    isHighRisk: 0,
     remark: ''
   })
   workStatusDisplay.value = getStatusText('pending')
@@ -430,6 +462,7 @@ const handleEdit = async (item) => {
         workTime: res.data.workTime ? dayjs(res.data.workTime).format('YYYY-MM-DD HH:mm:ss') : null,
         startTime: res.data.startTime ? dayjs(res.data.startTime).format('YYYY-MM-DD HH:mm:ss') : null,
         endTime: res.data.endTime ? dayjs(res.data.endTime).format('YYYY-MM-DD HH:mm:ss') : null,
+        isHighRisk: res.data.isHighRisk || 0,
         remark: res.data.remark || ''
       })
       workStatusDisplay.value = getStatusText(res.data.workStatus)
@@ -442,6 +475,44 @@ const handleEdit = async (item) => {
   } catch (error) {
     console.error(error)
     showToast({ type: 'fail', message: '获取数据失败' })
+  }
+}
+
+const handleSignup = async (item) => {
+  try {
+    if (item.isHighRisk === 1) {
+      const checkRes = await riskApi.checkApplyForHighRisk(currentUserId.value)
+      if (checkRes.code === 200 && !checkRes.data.canApply) {
+        const restriction = checkRes.data.restriction
+        const reason = restriction?.description || '您的账号当前被限制报名高风险岗位'
+        await showDialog({
+          title: '报名受限',
+          message: `${reason}\n\n您可以前往【风险申诉】页面提交申诉。`,
+          confirmButtonText: '去申诉',
+          cancelButtonText: '知道了',
+          showCancelButton: true
+        })
+        router.push('/h5/risk')
+        return
+      }
+      await showConfirmDialog({
+        title: '高风险岗位提示',
+        message: '该岗位为高风险岗位，您已通过风险检查，确认报名吗？',
+        confirmButtonText: '确认报名',
+        cancelButtonText: '取消'
+      })
+    }
+    const res = await workApi.signup({
+      workId: item.id,
+      userId: currentUserId.value,
+      userName: '当前用户'
+    })
+    if (res.code === 200) {
+      showToast({ type: 'success', message: '报名成功' })
+    }
+  } catch (error) {
+    if (error === 'cancel') return
+    console.error(error)
   }
 }
 

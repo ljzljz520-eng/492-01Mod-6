@@ -41,5 +41,29 @@ export const workApi = {
       method: 'get',
       params
     })
+  },
+  // 报名工作
+  signup(data) {
+    return request({
+      url: '/work/signup',
+      method: 'post',
+      data
+    })
+  },
+  // 分页查询报名记录
+  pageSignups(params) {
+    return request({
+      url: '/work/signup/page',
+      method: 'get',
+      params
+    })
+  },
+  // 取消报名
+  cancelSignup(id, userId) {
+    return request({
+      url: `/work/signup/${id}/cancel`,
+      method: 'put',
+      data: { userId }
+    })
   }
 }

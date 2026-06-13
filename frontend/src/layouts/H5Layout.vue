@@ -18,6 +18,7 @@
     <van-tabbar v-model="activeTab" route fixed placeholder>
       <van-tabbar-item icon="photo-o" to="/h5/file">文件</van-tabbar-item>
       <van-tabbar-item icon="orders-o" to="/h5/work">工作</van-tabbar-item>
+      <van-tabbar-item icon="warning-o" to="/h5/risk">风险申诉</van-tabbar-item>
       <van-tabbar-item icon="user-o" to="/h5/user">用户</van-tabbar-item>
     </van-tabbar>
   </div>
@@ -35,6 +36,7 @@ const navTitle = computed(() => {
   const titles = {
     '/h5/file': '文件管理',
     '/h5/work': '工作管理',
+    '/h5/risk': '风险与申诉',
     '/h5/user': '用户管理'
   }
   return titles[route.path] || '工作管理系统'

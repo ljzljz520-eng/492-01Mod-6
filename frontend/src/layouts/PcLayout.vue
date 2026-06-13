@@ -37,6 +37,10 @@
               <el-icon><User /></el-icon>
               <span>用户管理</span>
             </el-menu-item>
+            <el-menu-item index="/pc/risk">
+              <el-icon><Warning /></el-icon>
+              <span>风险与申诉</span>
+            </el-menu-item>
           </el-menu>
         </el-aside>
         <el-main class="p-6">
@@ -50,7 +54,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Document, Briefcase, RefreshRight, User } from '@element-plus/icons-vue'
+import { Document, Briefcase, RefreshRight, User, Warning } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()

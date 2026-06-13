@@ -18,7 +18,7 @@ import org.springframework.util.StringUtils;
 public class WorkServiceImpl extends ServiceImpl<WorkMapper, Work> implements WorkService {
 
     @Override
-    public Page<Work> pageQuery(Long current, Long size, String workName, String workStatus, String priority) {
+    public Page<Work> pageQuery(Long current, Long size, String workName, String workStatus, String priority, Integer isHighRisk) {
         Page<Work> page = new Page<>(current, size);
         LambdaQueryWrapper<Work> wrapper = new LambdaQueryWrapper<>();
         
@@ -30,6 +30,9 @@ public class WorkServiceImpl extends ServiceImpl<WorkMapper, Work> implements Wo
         }
         if (StringUtils.hasText(priority)) {
             wrapper.eq(Work::getPriority, priority);
+        }
+        if (isHighRisk != null) {
+            wrapper.eq(Work::getIsHighRisk, isHighRisk);
         }
         
         wrapper.orderByDesc(Work::getCreateTime);

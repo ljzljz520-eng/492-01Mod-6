@@ -39,7 +39,7 @@
             <el-option label="已取消" value="cancelled" />
           </el-select>
         </el-form-item>
-        <el-form-item label="优先级">
+        <el-form-item label="优先级" prop="priority">
           <el-select 
             v-model="searchForm.priority" 
             placeholder="请选择优先级" 
@@ -51,6 +51,18 @@
             <el-option label="普通" value="normal" />
             <el-option label="高" value="high" />
             <el-option label="紧急" value="urgent" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="风险等级">
+          <el-select 
+            v-model="searchForm.isHighRisk"
+            placeholder="请选择" 
+            clearable 
+            style="width: 180px"
+            class="rounded-lg"
+          >
+            <el-option label="普通" :value="0" />
+            <el-option label="高风险" :value="1" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -97,6 +109,24 @@
               class="rounded-full px-3 py-1"
             >
               {{ getPriorityText(row.priority) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="isHighRisk" label="风险等级" width="120">
+          <template #default="{ row }">
+            <el-tag 
+              v-if="row.isHighRisk === 1"
+              type="danger"
+              class="rounded-full px-3 py-1"
+            >
+              高风险
+            </el-tag>
+            <el-tag 
+              v-else
+              type="success"
+              class="rounded-full px-3 py-1"
+            >
+              普通
             </el-tag>
           </template>
         </el-table-column>
@@ -247,6 +277,15 @@
             class="rounded-lg"
           />
         </el-form-item>
+        <el-form-item label="高风险岗位">
+          <el-switch
+            v-model="formData.isHighRisk"
+            :active-value="1"
+            :inactive-value="0"
+            active-text="是"
+            inactive-text="否"
+          />
+        </el-form-item>
       </el-form>
       <template #footer>
         <div class="flex justify-end gap-3">
@@ -287,7 +326,8 @@ const formRef = ref(null)
 const searchForm = reactive({
   workName: '',
   workStatus: '',
-  priority: ''
+  priority: '',
+  isHighRisk: null
 })
 
 const pagination = reactive({
@@ -305,6 +345,7 @@ const formData = reactive({
   workTime: null,
   startTime: null,
   endTime: null,
+  isHighRisk: 0,
   remark: ''
 })
 
@@ -352,7 +393,8 @@ const handleReset = () => {
   Object.assign(searchForm, {
     workName: '',
     workStatus: '',
-    priority: ''
+    priority: '',
+    isHighRisk: null
   })
   handleSearch()
 }
@@ -368,6 +410,7 @@ const handleAdd = () => {
     workTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
     startTime: null,
     endTime: null,
+    isHighRisk: 0,
     remark: ''
   })
   dialogVisible.value = true
@@ -390,6 +433,7 @@ const handleEdit = async (row) => {
         workTime: res.data.workTime ? dayjs(res.data.workTime).format('YYYY-MM-DD HH:mm:ss') : null,
         startTime: res.data.startTime ? dayjs(res.data.startTime).format('YYYY-MM-DD HH:mm:ss') : null,
         endTime: res.data.endTime ? dayjs(res.data.endTime).format('YYYY-MM-DD HH:mm:ss') : null,
+        isHighRisk: res.data.isHighRisk || 0,
         remark: res.data.remark || ''
       })
       dialogVisible.value = true

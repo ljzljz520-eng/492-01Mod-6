@@ -56,6 +56,11 @@ public class Work extends BaseEntity {
     private String priority;
 
     /**
+     * 是否高风险岗位（0-否，1-是）
+     */
+    private Integer isHighRisk;
+
+    /**
      * 备注
      */
     private String remark;
