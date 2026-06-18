@@ -104,7 +104,7 @@ public class RiskAppealServiceImpl extends ServiceImpl<RiskAppealMapper, RiskApp
 
             RiskRecord riskRecord = riskRecordMapper.selectById(appeal.getRiskRecordId());
             if (riskRecord != null) {
-                riskRecord.setStatus("rejected");
+                riskRecord.setStatus("active");
                 if (appeal.getNextAppealTime() != null) {
                     riskRecord.setNextAppealTime(appeal.getNextAppealTime());
                 }
@@ -145,13 +145,7 @@ public class RiskAppealServiceImpl extends ServiceImpl<RiskAppealMapper, RiskApp
                 riskRecord.setUpdateTime(LocalDateTime.now());
                 riskRecordMapper.updateById(riskRecord);
 
-                User user = userMapper.selectById(riskRecord.getUserId());
-                if (user != null) {
-                    user.setRiskLevel("normal");
-                    user.setRestrictReason(null);
-                    user.setRestrictTime(null);
-                    userMapper.updateById(user);
-                }
+                refreshUserRiskLevel(riskRecord.getUserId());
             }
         } else {
             appeal.setStatus("rejected");
@@ -160,7 +154,7 @@ public class RiskAppealServiceImpl extends ServiceImpl<RiskAppealMapper, RiskApp
             this.updateById(appeal);
 
             if (riskRecord != null) {
-                riskRecord.setStatus("rejected");
+                riskRecord.setStatus("active");
                 riskRecord.setNextAppealTime(nextAppealTime);
                 riskRecord.setUpdateTime(LocalDateTime.now());
                 riskRecordMapper.updateById(riskRecord);
@@ -216,5 +210,47 @@ public class RiskAppealServiceImpl extends ServiceImpl<RiskAppealMapper, RiskApp
         }
 
         return null;
+    }
+
+    /**
+     * 根据用户所有活跃风险记录，重新计算并更新用户的 riskLevel
+     * 规则：
+     *   - 存在 banned 记录（active/appealing）→ riskLevel = banned
+     *   - 否则存在 restricted 记录 → riskLevel = restricted
+     *   - 否则 → riskLevel = normal
+     *   并使用最新一条活跃记录的描述和时间作为 user 表的受限信息
+     */
+    private void refreshUserRiskLevel(Long userId) {
+        LambdaQueryWrapper<RiskRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(RiskRecord::getUserId, userId);
+        wrapper.in(RiskRecord::getStatus, "active", "appealing");
+        wrapper.orderByDesc(RiskRecord::getCreateTime);
+        List<RiskRecord> activeRecords = riskRecordMapper.selectList(wrapper);
+
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            return;
+        }
+
+        if (activeRecords == null || activeRecords.isEmpty()) {
+            user.setRiskLevel("normal");
+            user.setRestrictReason(null);
+            user.setRestrictTime(null);
+            userMapper.updateById(user);
+            return;
+        }
+
+        boolean hasBanned = activeRecords.stream()
+                .anyMatch(r -> "banned".equals(r.getRiskLevel()));
+        RiskRecord latest = activeRecords.get(0);
+
+        if (hasBanned) {
+            user.setRiskLevel("banned");
+        } else {
+            user.setRiskLevel("restricted");
+        }
+        user.setRestrictReason(latest.getDescription());
+        user.setRestrictTime(latest.getCreateTime());
+        userMapper.updateById(user);
     }
 }

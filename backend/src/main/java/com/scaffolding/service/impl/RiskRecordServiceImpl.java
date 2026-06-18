@@ -125,15 +125,46 @@ public class RiskRecordServiceImpl extends ServiceImpl<RiskRecordMapper, RiskRec
         boolean result = this.updateById(record);
 
         if (result) {
-            User user = userMapper.selectById(record.getUserId());
-            if (user != null) {
-                user.setRiskLevel("normal");
-                user.setRestrictReason(null);
-                user.setRestrictTime(null);
-                userMapper.updateById(user);
-            }
+            refreshUserRiskLevel(record.getUserId());
         }
 
         return result;
+    }
+
+    /**
+     * 根据用户所有活跃风险记录，重新计算并更新用户的 riskLevel
+     */
+    private void refreshUserRiskLevel(Long userId) {
+        LambdaQueryWrapper<RiskRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(RiskRecord::getUserId, userId);
+        wrapper.in(RiskRecord::getStatus, "active", "appealing");
+        wrapper.orderByDesc(RiskRecord::getCreateTime);
+        List<RiskRecord> activeRecords = this.list(wrapper);
+
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            return;
+        }
+
+        if (activeRecords == null || activeRecords.isEmpty()) {
+            user.setRiskLevel("normal");
+            user.setRestrictReason(null);
+            user.setRestrictTime(null);
+            userMapper.updateById(user);
+            return;
+        }
+
+        boolean hasBanned = activeRecords.stream()
+                .anyMatch(r -> "banned".equals(r.getRiskLevel()));
+        RiskRecord latest = activeRecords.get(0);
+
+        if (hasBanned) {
+            user.setRiskLevel("banned");
+        } else {
+            user.setRiskLevel("restricted");
+        }
+        user.setRestrictReason(latest.getDescription());
+        user.setRestrictTime(latest.getCreateTime());
+        userMapper.updateById(user);
     }
 }
